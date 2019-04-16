@@ -13,7 +13,7 @@ function init() {
         # checkout latest tag of the repo initially after clone
         git -C "${REPO_DIR}" checkout "$(git describe --tags `git rev-list --tags --max-count=1`)"
     else
-        git -C "${REPO_DIR}" pull || { echo "git pull failed with exit code $?. continuing as the repo is already there ..." }
+        git -C "${REPO_DIR}" pull
     fi
 }
 
@@ -43,7 +43,7 @@ function copy_images() {
     if [[ "$1" == "" || "$1" == "ceph" ]]; then
       echo "copying ceph images"
       copy_image_to_cluster "${BUILD_REGISTRY}/ceph-amd64" rook/ceph:master
-      copy_image_to_cluster ceph/ceph:v13 ceph/ceph:v13
+      #copy_image_to_cluster ceph/ceph:v14.2.0-20190319 ceph/ceph:v14.2.0-20190319
     fi
 
     if [[ "$1" == "" || "$1" == "cockroachdb" ]]; then
@@ -76,7 +76,7 @@ case "${1:-}" in
         make status
     ;;
     up)
-        make up
+        #make up
         copy_images "${2}"
     ;;
     update)

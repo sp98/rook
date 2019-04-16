@@ -31,15 +31,16 @@ import (
 	"github.com/rook/rook/pkg/daemon/ceph/agent/flexvolume/attachment"
 	"github.com/rook/rook/pkg/operator/ceph/agent"
 	"github.com/rook/rook/pkg/operator/ceph/cluster"
+	"github.com/rook/rook/pkg/operator/ceph/cluster/pdb"
 	"github.com/rook/rook/pkg/operator/ceph/csi"
 	"github.com/rook/rook/pkg/operator/ceph/file"
 	"github.com/rook/rook/pkg/operator/ceph/object"
-	"github.com/rook/rook/pkg/operator/ceph/object/user"
+	objectuser "github.com/rook/rook/pkg/operator/ceph/object/user"
 	"github.com/rook/rook/pkg/operator/ceph/pool"
 	"github.com/rook/rook/pkg/operator/ceph/provisioner"
 	"github.com/rook/rook/pkg/operator/discover"
 	"github.com/rook/rook/pkg/operator/k8sutil"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
 // volume provisioner constant
@@ -153,6 +154,9 @@ func (o *Operator) Run() error {
 	}
 
 	// watch for changes to the rook clusters
+	pdbController := pdb.NewPdbController(o.context)
+	pdbController.StartWatch(stopChan)
+
 	o.clusterController.StartWatch(namespaceToWatch, stopChan)
 
 	for {

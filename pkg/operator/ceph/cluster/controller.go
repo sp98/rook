@@ -31,6 +31,7 @@ import (
 	"github.com/rook/rook/pkg/daemon/ceph/agent/flexvolume/attachment"
 	"github.com/rook/rook/pkg/operator/ceph/cluster/mon"
 	"github.com/rook/rook/pkg/operator/ceph/cluster/osd"
+	"github.com/rook/rook/pkg/operator/ceph/cluster/pdb"
 	"github.com/rook/rook/pkg/operator/ceph/file"
 	"github.com/rook/rook/pkg/operator/ceph/nfs"
 	"github.com/rook/rook/pkg/operator/ceph/object"
@@ -238,6 +239,16 @@ func (c *ClusterController) onAdd(obj interface{}) {
 		logger.Warningf("mon count is even (given: %d), should be uneven, continuing", cluster.Spec.Mon.Count)
 	}
 
+	pdbController := pdb.NewPdbController(c.context)
+	monPdb, _ := pdbController.GetMonPDB()
+	if monPdb != nil {
+		minAvailableMon := int(monPdb.Spec.MinAvailable.IntVal)
+		if !pdbController.ValidateMinAvaliableMon(cluster.Spec.Mon.Count, minAvailableMon) {
+			logger.Errorf("Failed to create cluster. Mon Count - %v not consistent with minAvaliable mon in PDB - %v ", cluster.Spec.Mon.Count, minAvailableMon)
+			return
+		}
+	}
+
 	cephVersion, err := cluster.detectCephVersion(cluster.Spec.CephVersion.Image, 15*time.Minute)
 	if err != nil {
 		logger.Errorf("unknown ceph major version. %+v", err)
@@ -318,6 +329,7 @@ func (c *ClusterController) onAdd(obj interface{}) {
 	if err != nil {
 		logger.Errorf("failed to add finalizer to cluster crd. %+v", err)
 	}
+
 }
 
 // ************************************************************************************************

@@ -253,6 +253,7 @@ rules:
   - pods
   - configmaps
   - services
+  - poddisruptionbudgets
   verbs:
   - get
   - list
@@ -273,7 +274,16 @@ rules:
   - create
   - update
   - delete
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - get
+  - list
+
 ---
+  
 # The cluster role for managing the Rook CRDs
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
