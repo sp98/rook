@@ -97,25 +97,28 @@ func (p *PdbController) onUpdate(oldObj, newObj interface{}) {
 }
 
 //ValidateMinAvailableMonCount validates the minAvaliable Field in the PodDisruptionBudget spec
-func (p *PdbController) ValidateMinAvailableMonCount(pdb *v1beta1.PodDisruptionBudget) bool {
+func (p *PdbController) ValidateMinAvailableMonCount(pdb *v1beta1.PodDisruptionBudget) (bool, error) {
 	isValid := false
 	if pdb.ObjectMeta.Name == monPDB {
 		logger.Debug("New PodDistributionBudget for Mon Found")
-		clusterObj, _ := p.GetClusterObj()
+		clusterObj, err := p.GetClusterObj()
+		if err != nil {
+			return isValid, err
+		}
 
 		if clusterObj.Spec.Mon.Count != 0 {
 			minAvaliableMon := int(pdb.Spec.MinAvailable.IntVal)
 			if !p.ValidateMonCount(clusterObj.Spec.Mon.Count, minAvaliableMon) {
 				logger.Warningf("Mon Count - %v not consistent with minAvaliable mon in PDB - %v ", clusterObj.Spec.Mon.Count, minAvaliableMon)
-				return isValid
+				return isValid, nil
 			}
 			isValid = true
-			return isValid
+			return isValid, nil
 		}
 
 	}
 
-	return isValid
+	return isValid, nil
 }
 
 //GetMonPDB fetchs the PodDisruptionBudget created for Mons
@@ -124,10 +127,8 @@ func (p *PdbController) GetMonPDB(namespace string, name string) (*v1beta1.PodDi
 	pdbs, err := p.context.Clientset.PolicyV1beta1().PodDisruptionBudgets(namespace).List(pdbOptions)
 
 	if err != nil {
-		if !errors.IsNotFound(err) {
-			logger.Warningf("Error checking for existing Pod Disruption Budgets  - %+v", err)
-			return nil, err
-		}
+		logger.Errorf("Error checking for existing Pod Disruption Budgets  - %+v", err)
+		return nil, err
 	}
 
 	for _, pdb := range pdbs.Items {

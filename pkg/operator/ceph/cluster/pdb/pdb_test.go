@@ -104,7 +104,7 @@ func TestValidMinAvailableMon(t *testing.T) {
 	pdbController := NewPdbController(context)
 	pdb, _ := pdbController.createMonPDB(3, monPDB)
 	pdbController.createCluster(4)
-	res := pdbController.ValidateMinAvailableMonCount(pdb)
+	res, _ := pdbController.ValidateMinAvailableMonCount(pdb)
 	assert.True(t, res)
 
 }
@@ -118,7 +118,7 @@ func TestInValidMinAvailableMon(t *testing.T) {
 	pdbController := NewPdbController(context)
 	pdb, _ := pdbController.createMonPDB(3, monPDB)
 	pdbController.createCluster(6)
-	res := pdbController.ValidateMinAvailableMonCount(pdb)
+	res, _ := pdbController.ValidateMinAvailableMonCount(pdb)
 	assert.False(t, res)
 
 }
@@ -132,7 +132,7 @@ func TestValidateMonCountWithOutPDB(t *testing.T) {
 	pdbController := NewPdbController(context)
 	pdb, _ := pdbController.createMonPDB(3, "test")
 	pdbController.createCluster(6)
-	res := pdbController.ValidateMinAvailableMonCount(pdb)
+	res, _ := pdbController.ValidateMinAvailableMonCount(pdb)
 	assert.False(t, res)
 }
 
@@ -157,7 +157,6 @@ func (p *PdbController) createMonPDB(minAvailable int, name string) (*pv1beta1.P
 }
 
 func (p *PdbController) createCluster(monCount int) (*v1.CephCluster, error) {
-
 	cluster := &v1.CephCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "rook-ceph",
