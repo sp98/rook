@@ -33,6 +33,7 @@ import (
 	discoverDaemon "github.com/rook/rook/pkg/daemon/discover"
 	"github.com/rook/rook/pkg/operator/ceph/cluster/mon"
 	"github.com/rook/rook/pkg/operator/ceph/cluster/osd"
+	"github.com/rook/rook/pkg/operator/ceph/cluster/pdb"
 	"github.com/rook/rook/pkg/operator/ceph/file"
 	"github.com/rook/rook/pkg/operator/ceph/nfs"
 	"github.com/rook/rook/pkg/operator/ceph/object"
@@ -260,6 +261,16 @@ func (c *ClusterController) onAdd(obj interface{}) {
 	}
 	if cluster.Spec.Mon.Count%2 == 0 {
 		logger.Warningf("mon count is even (given: %d), should be uneven, continuing", cluster.Spec.Mon.Count)
+	}
+
+	pdbController := pdb.NewPdbController(c.context)
+	monPdb, _ := pdbController.GetMonPDB(cluster.Namespace, "mon-pdb")
+	if monPdb != nil {
+		minAvailableMon := int(monPdb.Spec.MinAvailable.IntVal)
+		if !pdbController.ValidateMonCount(cluster.Spec.Mon.Count, minAvailableMon) {
+			logger.Errorf("Failed to create cluster. Mon Count - %v not consistent with minAvaliable mon in PDB - %v ", cluster.Spec.Mon.Count, minAvailableMon)
+			return
+		}
 	}
 
 	cephVersion, err := cluster.detectCephVersion(cluster.Spec.CephVersion.Image, 15*time.Minute)
