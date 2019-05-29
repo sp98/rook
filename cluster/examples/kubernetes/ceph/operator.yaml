@@ -29,7 +29,7 @@ spec:
       labels:
         app: rook-ceph-operator
     spec:
-      serviceAccountName: rook-ceph-system
+      serviceAccountName: rook-ceph-sp
       containers:
       - name: rook-ceph-operator
         image: rook/ceph:master

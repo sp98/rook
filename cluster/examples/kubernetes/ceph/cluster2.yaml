@@ -12,8 +12,8 @@
 apiVersion: ceph.rook.io/v1
 kind: CephCluster
 metadata:
-  name: rook-ceph
-  namespace: rook-ceph
+  name: rook-ceph2
+  namespace: rook-ceph2
 spec:
   cephVersion:
     # The container image used to launch the Ceph daemon pods (mon, mgr, osd, mds, rgw).
@@ -27,7 +27,7 @@ spec:
   # The path on the host where configuration files will be persisted. Must be specified.
   # Important: if you reinstall the cluster, make sure you delete this directory from each host or else the mons will fail to start on the new cluster.
   # In Minikube, the '/data' directory is configured to persist across reboots. Use "/data/rook" in Minikube environment.
-  dataDirHostPath: /data0/rook1
+  dataDirHostPath: /data0/rook2
   # set the amount of mons to be started
   mon:
     count: 3
@@ -101,7 +101,7 @@ spec:
     nodes:
     - name: "node1"
       devices:             # specific devices to use for storage can be specified for each node
-      - name: "sda"
+      - name: "sdb"
       storeConfig:         # configuration can be specified at the node level which overrides the cluster level config
         storeType: bluestore
       # The default and recommended storeType is dynamically set to bluestore for devices and filestore for directories.
