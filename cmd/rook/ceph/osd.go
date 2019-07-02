@@ -230,6 +230,7 @@ func copyRookBinaries(cmd *cobra.Command, args []string) error {
 
 // Provision a device or directory for an OSD
 func prepareOSD(cmd *cobra.Command, args []string) error {
+	logger.Println("SP: inside prepare OSD")
 	if err := verifyConfigFlags(provisionCmd); err != nil {
 		return err
 	}
@@ -277,6 +278,9 @@ func prepareOSD(cmd *cobra.Command, args []string) error {
 	agent := osddaemon.NewAgent(context, dataDevices, cfg.metadataDevice, cfg.directories, forceFormat,
 		crushLocation, cfg.storeConfig, &clusterInfo, cfg.nodeName, kv)
 
+	logger.Infof("Calling provision wiht context : %+v", context)
+	logger.Infof("Calling provision wiht agent : %+v", agent)
+
 	err = osddaemon.Provision(context, agent)
 	if err != nil {
 		// something failed in the OSD orchestration, update the status map with failure details
@@ -296,7 +300,10 @@ func commonOSDInit(cmd *cobra.Command) {
 	rook.SetLogLevel()
 	rook.LogStartupInfo(cmd.Flags())
 
+	logger.Printf("Before calling parese mon endpoints - %+v", clusterInfo.Monitors)
 	clusterInfo.Monitors = mon.ParseMonEndpoints(cfg.monEndpoints)
+	logger.Printf("After calling parese mon endpoints - %+v", clusterInfo.Monitors)
+
 }
 
 // Parse the devices, which are comma separated. A colon indicates a non-default number of osds per device.

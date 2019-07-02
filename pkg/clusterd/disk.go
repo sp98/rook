@@ -91,6 +91,8 @@ func DiscoverDevices(executor exec.Executor) ([]*sys.LocalDisk, error) {
 			}
 		}
 
+		logger.Infof("SP: disk uuid - %+v", diskUUID)
+
 		udevInfo, err := sys.GetUdevInfo(d, executor)
 		if err != nil {
 			logger.Warningf("failed to get udev info for device %s: %+v", d, err)
@@ -150,6 +152,8 @@ func DiscoverDevices(executor exec.Executor) ([]*sys.LocalDisk, error) {
 
 		disks = append(disks, disk)
 	}
+
+	logger.Infof("SP: Discoverd devices - %+v", *&disks)
 
 	return disks, nil
 }

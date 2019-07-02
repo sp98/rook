@@ -89,6 +89,18 @@ spec:
 #    mon:
 #    osd:
   storage: # cluster level storage configuration and selection
+    deviceSets:
+    - name: cluster1-set1
+      count: 3
+      resources:
+        requests:
+          cpu: 2
+          memory: 4Gi
+      volumeClaimTemplates:
+      - resources:
+          requests:
+            storage: 5Ti
+        storageClassName: gp2-ebs
     useAllNodes: true
     useAllDevices: true
     deviceFilter:

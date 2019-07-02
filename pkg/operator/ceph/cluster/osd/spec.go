@@ -356,6 +356,7 @@ func (c *Cluster) getCopyBinariesContainer() (v1.Volume, *v1.Container) {
 func (c *Cluster) provisionPodTemplateSpec(devices []rookalpha.Device, selection rookalpha.Selection, resources v1.ResourceRequirements,
 	storeConfig config.StoreConfig, metadataDevice, nodeName, location string, restart v1.RestartPolicy) (*v1.PodTemplateSpec, error) {
 
+	logger.Printf("SP: Provision POD template")
 	copyBinariesVolume, copyBinariesContainer := c.getCopyBinariesContainer()
 
 	volumes := append(opspec.PodVolumes(c.dataDirHostPath, c.Namespace), copyBinariesVolume)
@@ -415,6 +416,8 @@ func (c *Cluster) provisionPodTemplateSpec(devices []rookalpha.Device, selection
 	// ceph-volume --dmcrypt uses cryptsetup that synchronizes with udev on
 	// host through semaphore
 	podSpec.HostIPC = storeConfig.EncryptedDevice
+
+	logger.Printf("SP - OSD Pod spec - %+v", podSpec)
 
 	return &v1.PodTemplateSpec{
 		ObjectMeta: podMeta,
@@ -480,7 +483,7 @@ func (c *Cluster) provisionOSDContainer(devices []rookalpha.Device, selection ro
 	devMountNeeded := false
 	privileged := false
 
-	// only 1 of device list, device filter and use all devices can be specified.  We prioritize in that order.
+	// only 1 of device list, device filter and use all devices can be specified.  We prioritize in that order.OSD settings from the CephCluster CR
 	if len(devices) > 0 {
 		deviceNames := make([]string, len(devices))
 		for i, device := range devices {

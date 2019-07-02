@@ -159,6 +159,8 @@ func (c *Cluster) checkNodesCompleted(selector string, config *provisionConfig, 
 }
 
 func (c *Cluster) completeOSDsForAllNodes(config *provisionConfig, configOSDs bool, timeoutMinutes int) bool {
+
+	logger.Info("SP: inside complete Osd for all nodes")
 	selector := fmt.Sprintf("%s=%s,%s=%s",
 		k8sutil.AppAttr, appName,
 		orchestrationStatusKey, provisioningLabelKey,
@@ -245,6 +247,7 @@ func (c *Cluster) completeOSDsForAllNodes(config *provisionConfig, configOSDs bo
 
 func (c *Cluster) handleStatusConfigMapStatus(nodeName string, config *provisionConfig, configMap *v1.ConfigMap, configOSDs bool) bool {
 
+	logger.Infof("SP: inside  handleStatusConfigMapStatus")
 	status := parseOrchestrationStatus(configMap.Data)
 	if status == nil {
 		return false

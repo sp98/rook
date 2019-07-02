@@ -170,6 +170,8 @@ func (c *cluster) createInstance(rookImage string, cephVersion cephver.CephVersi
 func (c *cluster) doOrchestration(rookImage string, cephVersion cephver.CephVersion, spec *cephv1.ClusterSpec) error {
 	// Create a configmap for overriding ceph config settings
 	// These settings should only be modified by a user after they are initialized
+
+	logger.Printf("SP: doOrchestration method called")
 	placeholderConfig := map[string]string{
 		k8sutil.ConfigOverrideVal: "",
 	}

@@ -43,7 +43,7 @@ function copy_images() {
     if [[ "$1" == "" || "$1" == "ceph" ]]; then
       echo "copying ceph images"
       copy_image_to_cluster "${BUILD_REGISTRY}/ceph-amd64" rook/ceph:master
-      copy_image_to_cluster ceph/ceph:v13 ceph/ceph:v13
+      copy_image_to_cluster ceph/ceph:v14.2.1-20190430 ceph/ceph:v14.2.1-20190430
     fi
 
     if [[ "$1" == "" || "$1" == "cockroachdb" ]]; then
@@ -76,7 +76,7 @@ case "${1:-}" in
         make status
     ;;
     up)
-        make up
+       # make up -j 3
         copy_images "${2}"
     ;;
     update)

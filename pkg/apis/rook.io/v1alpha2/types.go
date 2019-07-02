@@ -16,7 +16,7 @@ limitations under the License.
 package v1alpha2
 
 import (
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -34,6 +34,7 @@ type StorageScopeSpec struct {
 	Location      string            `json:"location,omitempty"`
 	Config        map[string]string `json:"config"`
 	Selection
+	StorageClassDeviceSets StorageClassDeviceSets `json:"storageClassDeviceSets,omitempty"`
 }
 
 type Node struct {
@@ -127,3 +128,16 @@ type KeyType string
 type AnnotationsSpec map[KeyType]Annotations
 
 type Annotations map[string]string
+
+//StorageClassDeviceSets is list of StorageClassDeviceSet
+type StorageClassDeviceSets []StorageClassDeviceSet
+
+// StorageClassDeviceSet is sets of devices consumed as block-mode PVCs
+type StorageClassDeviceSet struct {
+	Name                 string
+	Count                int
+	Resources            v1.ResourceRequirements
+	Placement            Placement
+	Config               map[string]string
+	volumeClaimTemplates []v1.PersistentVolumeClaimSpec
+}

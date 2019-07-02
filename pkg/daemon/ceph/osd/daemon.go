@@ -82,6 +82,7 @@ func RunFilestoreOnDevice(context *clusterd.Context, mountSourcePath, mountPath 
 
 func Provision(context *clusterd.Context, agent *OsdAgent) error {
 	// set the initial orchestration status
+	logger.Info("SP: inside OSD deamon provision")
 	status := oposd.OrchestrationStatus{Status: oposd.OrchestrationStatusComputingDiff}
 	if err := oposd.UpdateNodeStatus(agent.kv, agent.nodeName, status); err != nil {
 		return err
@@ -247,6 +248,8 @@ func getAvailableDevices(context *clusterd.Context, desiredDevices []DesiredDevi
 			available.Entries[device.Name] = deviceInfo
 		}
 	}
+
+	logger.Infof("SP: Available device: %+v", *available)
 
 	return available, nil
 }

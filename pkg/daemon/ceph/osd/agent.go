@@ -147,7 +147,9 @@ func (a *OsdAgent) removeDirs(context *clusterd.Context, removedDirs map[string]
 
 func (a *OsdAgent) configureDevices(context *clusterd.Context, devices *DeviceOsdMapping) ([]oposd.OSDInfo, error) {
 
+	logger.Infof("SP: Inside configure devices with - %+v", *devices)
 	cvSupported, err := getCephVolumeSupported(context)
+	logger.Infof("SP: Supported Ceph Volume  - %+v", cvSupported)
 	if err != nil {
 		logger.Errorf("failed to detect if ceph-volume is available. %+v", err)
 	}
@@ -206,6 +208,8 @@ func (a *OsdAgent) configureDevices(context *clusterd.Context, devices *DeviceOs
 		return nil, fmt.Errorf("failed to configure devices with ceph-volume. %+v", err)
 	}
 	osds = append(osds, cvOSDs...)
+
+	logger.Infof("SP: Configure Devices OSD list - %+v", osds)
 	return osds, nil
 }
 

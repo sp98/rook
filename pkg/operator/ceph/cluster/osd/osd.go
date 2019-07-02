@@ -130,6 +130,7 @@ type OrchestrationStatus struct {
 func (c *Cluster) Start() error {
 	// Validate pod's memory if specified
 	// This is valid for both Filestore and Bluestore
+	logger.Printf("SP: OSD Start Method Called")
 	err := opspec.CheckPodMemory(c.resources, cephOsdPodMinimumMemory)
 	if err != nil {
 		return fmt.Errorf("%v", err)
@@ -142,12 +143,14 @@ func (c *Cluster) Start() error {
 	}
 
 	if c.DesiredStorage.UseAllNodes {
+		logger.Info("SP: Use Al nodes is true")
 		// Get the list of all nodes in the cluster. The placement settings will be applied below.
 		hostnameMap, err := k8sutil.GetNodeHostNames(c.context.Clientset)
 		if err != nil {
 			logger.Warningf("failed to get node hostnames: %v", err)
 			return err
 		}
+		logger.Infof("SP: hostname map %+v", hostnameMap)
 		c.DesiredStorage.Nodes = nil
 		for _, hostname := range hostnameMap {
 			storageNode := rookalpha.Node{
@@ -155,6 +158,8 @@ func (c *Cluster) Start() error {
 			}
 			c.DesiredStorage.Nodes = append(c.DesiredStorage.Nodes, storageNode)
 		}
+
+		logger.Infof("SP: desired storage nodes  %+v", c.DesiredStorage.Nodes)
 		logger.Debugf("storage nodes: %+v", c.DesiredStorage.Nodes)
 	}
 	// generally speaking, this finds nodes which are capable of running new osds
@@ -223,11 +228,11 @@ func (c *Cluster) Start() error {
 }
 
 func (c *Cluster) startProvisioning(config *provisionConfig) {
+	logger.Println("SP: OSD start provisioning")
 	if len(c.dataDirHostPath) == 0 {
 		logger.Warningf("skipping osd provisioning where no dataDirHostPath is set")
 		return
 	}
-
 	// start with nodes currently in the storage spec
 	for _, node := range c.ValidStorage.Nodes {
 		// fully resolve the storage config and resources for this node
@@ -263,6 +268,8 @@ func (c *Cluster) startProvisioning(config *provisionConfig) {
 			}
 		}
 
+		logger.Infof("SP: Job created-- %+v", job)
+
 		if !c.runJob(job, n.Name, config, "provision") {
 			status := OrchestrationStatus{Status: OrchestrationStatusCompleted, Message: fmt.Sprintf("failed to start osd provisioning on node %s", n.Name)}
 			if err := c.updateNodeStatus(n.Name, status); err != nil {
@@ -273,6 +280,7 @@ func (c *Cluster) startProvisioning(config *provisionConfig) {
 }
 
 func (c *Cluster) runJob(job *batch.Job, nodeName string, config *provisionConfig, action string) bool {
+	logger.Infof("SP: Running Job: %v on Node: %s ", job, nodeName)
 	if err := k8sutil.RunReplaceableJob(c.context.Clientset, job, false); err != nil {
 		if !errors.IsAlreadyExists(err) {
 			// we failed to create job, update the orchestration status for this node
