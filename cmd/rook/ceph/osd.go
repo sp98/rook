@@ -230,6 +230,7 @@ func copyRookBinaries(cmd *cobra.Command, args []string) error {
 
 // Provision a device or directory for an OSD
 func prepareOSD(cmd *cobra.Command, args []string) error {
+	logger.Infof("SP: Starting Prepare OSD")
 	if err := verifyConfigFlags(provisionCmd); err != nil {
 		return err
 	}
@@ -239,6 +240,8 @@ func prepareOSD(cmd *cobra.Command, args []string) error {
 	}
 
 	var dataDevices []osddaemon.DesiredDevice
+	logger.Infof("SP: OSDData Device Filter  %+v", osdDataDeviceFilter)
+	logger.Infof("SP: cfg devices  %+v", cfg.devices)
 	if osdDataDeviceFilter != "" {
 		if cfg.devices != "" {
 			return fmt.Errorf("Only one of --data-devices and --data-device-filter can be specified.")
@@ -248,12 +251,15 @@ func prepareOSD(cmd *cobra.Command, args []string) error {
 			{Name: osdDataDeviceFilter, IsFilter: true, OSDsPerDevice: cfg.storeConfig.OSDsPerDevice},
 		}
 	} else {
+		logger.Infof("SP: Inside Parse devices ")
 		var err error
 		dataDevices, err = parseDevices(cfg.devices)
 		if err != nil {
 			rook.TerminateFatal(fmt.Errorf("failed to parse device list (%s). %+v", cfg.devices, err))
 		}
 	}
+
+	logger.Infof("SP: Data Devices  %+v", dataDevices)
 
 	clientset, _, rookClientset, err := rook.GetClientset()
 	if err != nil {
@@ -266,10 +272,12 @@ func prepareOSD(cmd *cobra.Command, args []string) error {
 	commonOSDInit(provisionCmd)
 
 	locArgs, err := client.FormatLocation(cfg.location, cfg.nodeName)
+	logger.Infof("SP: loc args  %+v", locArgs)
 	if err != nil {
 		rook.TerminateFatal(fmt.Errorf("invalid location. %+v", err))
 	}
 	crushLocation := strings.Join(locArgs, " ")
+	logger.Infof("SP: crush location  %+v", crushLocation)
 
 	forceFormat := false
 	ownerRef := cluster.ClusterOwnerRef(clusterInfo.Name, ownerRefID)

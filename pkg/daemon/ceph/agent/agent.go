@@ -32,7 +32,7 @@ import (
 	"github.com/rook/rook/pkg/daemon/ceph/agent/flexvolume/attachment"
 	"github.com/rook/rook/pkg/daemon/ceph/agent/flexvolume/manager/ceph"
 	"github.com/rook/rook/pkg/operator/ceph/agent"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
 var logger = capnslog.NewPackageLogger("github.com/rook/rook", "rook-ceph-agent")
@@ -49,15 +49,20 @@ func New(context *clusterd.Context) *Agent {
 
 // Run the agent
 func (a *Agent) Run() error {
+	logger.Infof("SP: Running Agent")
 	volumeAttachmentController, err := attachment.New(a.context)
 	if err != nil {
 		return fmt.Errorf("failed to create volume attachment controller: %+v", err)
 	}
 
+	logger.Infof("SP: Volume attachment controller- %+v", volumeAttachmentController)
+
 	volumeManager, err := ceph.NewVolumeManager(a.context)
 	if err != nil {
 		return fmt.Errorf("failed to create volume manager: %+v", err)
 	}
+
+	logger.Infof("SP: Volume manager- %+v", volumeManager)
 
 	mountSecurityMode := os.Getenv(agent.AgentMountSecurityModeEnv)
 	// Don't check if it is not empty because the operator always sets it on the DaemonSet
@@ -65,6 +70,8 @@ func (a *Agent) Run() error {
 	if mountSecurityMode == "" {
 		return fmt.Errorf("no mount security mode env var found on the agent, have you upgraded your Rook operator correctly?")
 	}
+
+	logger.Infof("SP: Mount Security Mode - %+v", mountSecurityMode)
 
 	flexvolumeController := flexvolume.NewController(a.context, volumeAttachmentController, volumeManager, mountSecurityMode)
 
@@ -82,6 +89,8 @@ func (a *Agent) Run() error {
 	if err != nil {
 		return fmt.Errorf("failed to get driver name. %+v", err)
 	}
+
+	logger.Infof("SP: driverName - %+v", driverName)
 
 	flexDriverVendors := []string{flexvolume.FlexvolumeVendor, flexvolume.FlexvolumeVendorLegacy}
 	for i, vendor := range flexDriverVendors {

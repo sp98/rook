@@ -146,6 +146,8 @@ func (c *cluster) detectCephVersion(image string, timeout time.Duration) (*cephv
 
 func (c *cluster) createInstance(rookImage string, cephVersion cephver.CephVersion) error {
 	var err error
+
+	logger.Infof("SP: Starting Create Instance")
 	c.setOrchestrationNeeded()
 
 	// execute an orchestration until
@@ -169,6 +171,9 @@ func (c *cluster) createInstance(rookImage string, cephVersion cephver.CephVersi
 func (c *cluster) doOrchestration(rookImage string, cephVersion cephver.CephVersion, spec *cephv1.ClusterSpec) error {
 	// Create a configmap for overriding ceph config settings
 	// These settings should only be modified by a user after they are initialized
+
+	logger.Infof("SP: Doing Orchestrations here")
+
 	placeholderConfig := map[string]string{
 		k8sutil.ConfigOverrideVal: "",
 	}
@@ -178,6 +183,8 @@ func (c *cluster) doOrchestration(rookImage string, cephVersion cephver.CephVers
 		},
 		Data: placeholderConfig,
 	}
+
+	logger.Infof("SP: config Map: %+v", cm)
 	k8sutil.SetOwnerRef(c.context.Clientset, c.Namespace, &cm.ObjectMeta, &c.ownerRef)
 	_, err := c.context.Clientset.CoreV1().ConfigMaps(c.Namespace).Create(cm)
 	if err != nil && !errors.IsAlreadyExists(err) {

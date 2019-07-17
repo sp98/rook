@@ -69,12 +69,14 @@ func NewFlexvolumeServer(context *clusterd.Context, controller *Controller) *Fle
 
 // Start configures the flexvolume driver on the host and starts the unix domain socket server to communicate with the driver
 func (s *FlexvolumeServer) Start(driverVendor, driverName string) error {
+	logger.Infof("SP: Starting Flex Volume Server")
 	// first install the flexvolume driver
 	// /usr/local/bin/rookflex
 	driverFile := path.Join(usrBinDir, flexvolumeDriverFileName)
+	logger.Infof("SP: driverFile: %+v", driverFile)
 	// /flexmnt/rook.io~rook-system
 	flexVolumeDriverDir := fmt.Sprintf(flexMountPath, driverVendor, driverName)
-
+	logger.Infof("SP: flexVolumeDriverDir: %+v", flexVolumeDriverDir)
 	err := configureFlexVolume(driverFile, flexVolumeDriverDir, driverName)
 	if err != nil {
 		return fmt.Errorf("unable to configure flexvolume %s: %v", flexVolumeDriverDir, err)
@@ -191,6 +193,7 @@ func LoadFlexSettings(directory string) []byte {
 
 func configureFlexVolume(driverFile, driverDir, driverName string) error {
 	// copying flex volume
+	logger.Infof("SP: Configgurring Flex Volume")
 	if _, err := os.Stat(driverDir); os.IsNotExist(err) {
 		err := os.Mkdir(driverDir, 0755)
 		if err != nil {
@@ -198,12 +201,16 @@ func configureFlexVolume(driverFile, driverDir, driverName string) error {
 		}
 	}
 
-	destFile := path.Join(driverDir, "."+driverName)  // /flextmnt/rook.io~rook-system/.rook-system
+	destFile := path.Join(driverDir, "."+driverName) // /flextmnt/rook.io~rook-system/.rook-system
+	logger.Infof("SP: destFile: %+v", destFile)
 	finalDestFile := path.Join(driverDir, driverName) // /flextmnt/rook.io~rook-system/rook-system
+	logger.Infof("SP: finalDestFile: %+v", finalDestFile)
 	err := copyFile(driverFile, destFile)
 	if err != nil {
 		return fmt.Errorf("unable to copy flexvolume from %s to %s: %+v", driverFile, destFile, err)
 	}
+
+	logger.Infof("SP: flexvolume from %s to %s", driverFile, destFile)
 
 	// renaming flex volume. Rename is an atomic execution while copying is not.
 	if _, err := os.Stat(finalDestFile); !os.IsNotExist(err) {
@@ -231,6 +238,7 @@ func configureFlexVolume(driverFile, driverDir, driverName string) error {
 		enableFSGroup = true
 	}
 	settings, err := generateFlexSettings(enableSELinuxRelabeling, enableFSGroup)
+	logger.Infof("SP: Flex Settings - %+v", settings)
 	if err != nil {
 		logger.Errorf("invalid flex settings. %+v", err)
 	} else {

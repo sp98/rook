@@ -110,6 +110,8 @@ func NewClusterController(context *clusterd.Context, rookImage string, volumeAtt
 
 // Watch watches instances of cluster resources
 func (c *ClusterController) StartWatch(namespace string, stopCh chan struct{}) error {
+
+	logger.Infof("SP: Start Watch for Clusters")
 	resourceHandlerFuncs := cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.onAdd,
 		UpdateFunc: c.onUpdate,
@@ -130,6 +132,8 @@ func (c *ClusterController) StartWatch(namespace string, stopCh chan struct{}) e
 			return c.context.Clientset.CoreV1().Nodes().Watch(options)
 		},
 	}
+
+	logger.Infof("SP: List Watch Nodes %+v", lwNodes)
 
 	_, nodeController := cache.NewInformer(
 		lwNodes,
@@ -223,7 +227,11 @@ func (c *ClusterController) onK8sNodeAdd(obj interface{}) {
 }
 
 func (c *ClusterController) onAdd(obj interface{}) {
+	logger.Infof("SP: OnAdd called for New Cluster")
 	clusterObj, migrationNeeded, err := getClusterObject(obj)
+
+	logger.Infof("SP: ClusterObj: %+v", clusterObj)
+	logger.Infof("SP: Migration Needed: %+v", migrationNeeded)
 	if err != nil {
 		logger.Errorf("failed to get cluster object: %+v", err)
 		return
@@ -241,9 +249,12 @@ func (c *ClusterController) onAdd(obj interface{}) {
 	}
 
 	cluster := newCluster(clusterObj, c.context)
+	logger.Infof("SP: Cluster : %+v", cluster)
 	c.clusterMap[cluster.Namespace] = cluster
 
 	logger.Infof("starting cluster in namespace %s", cluster.Namespace)
+
+	logger.Infof("SP: Cluster Controller data - %+v", c)
 
 	if c.devicesInUse && cluster.Spec.Storage.AnyUseAllDevices() {
 		message := "using all devices in more than one namespace not supported"
@@ -258,6 +269,7 @@ func (c *ClusterController) onAdd(obj interface{}) {
 		c.devicesInUse = true
 	}
 
+	logger.Infof("SP: Cluster Spec mons %+v", cluster.Spec.Mon)
 	if cluster.Spec.Mon.Count <= 0 {
 		logger.Warningf("mon count is 0 or less, should be at least 1, will use default value of %d", mon.DefaultMonCount)
 		cluster.Spec.Mon.Count = mon.DefaultMonCount
@@ -291,6 +303,7 @@ func (c *ClusterController) onAdd(obj interface{}) {
 			return false, nil
 		}
 
+		logger.Infof("SP: Before Creating Instance for Rook Ceph")
 		err := cluster.createInstance(c.rookImage, *cephVersion)
 		if err != nil {
 			logger.Errorf("failed to create cluster in namespace %s. %+v", cluster.Namespace, err)
@@ -769,6 +782,9 @@ func (c *ClusterController) updateClusterStatus(namespace, name string, state ce
 		return fmt.Errorf("failed to get cluster from namespace %s prior to updating its status: %+v", namespace, err)
 	}
 
+	logger.Infof("SP: Updating Cluster Status")
+	logger.Infof("SP: Before: %+v", cluster.Status)
+
 	// update the status on the retrieved cluster object
 	// do not overwrite the ceph status that is updated in a separate goroutine
 	cluster.Status.State = state
@@ -776,6 +792,8 @@ func (c *ClusterController) updateClusterStatus(namespace, name string, state ce
 	if _, err := c.context.RookClientset.CephV1().CephClusters(namespace).Update(cluster); err != nil {
 		return fmt.Errorf("failed to update cluster %s status: %+v", namespace, err)
 	}
+
+	logger.Infof("SP: After: %+v", cluster.Status)
 
 	return nil
 }

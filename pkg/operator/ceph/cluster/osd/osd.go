@@ -129,6 +129,9 @@ type OrchestrationStatus struct {
 func (c *Cluster) Start() error {
 	// Validate pod's memory if specified
 	// This is valid for both Filestore and Bluestore
+
+	logger.Infof("SP: Starting OSDs ")
+
 	err := opspec.CheckPodMemory(c.resources, cephOsdPodMinimumMemory)
 	if err != nil {
 		return fmt.Errorf("%v", err)
@@ -143,6 +146,7 @@ func (c *Cluster) Start() error {
 	if c.DesiredStorage.UseAllNodes {
 		// Get the list of all nodes in the cluster. The placement settings will be applied below.
 		hostnameMap, err := k8sutil.GetNodeHostNames(c.context.Clientset)
+		logger.Infof("SP: HostnameMap: %+v", hostnameMap)
 		if err != nil {
 			logger.Warningf("failed to get node hostnames: %v", err)
 			return err
@@ -154,10 +158,13 @@ func (c *Cluster) Start() error {
 			}
 			c.DesiredStorage.Nodes = append(c.DesiredStorage.Nodes, storageNode)
 		}
+
+		logger.Infof("SP: Desired Storage Nodes %+v", c.DesiredStorage.Nodes)
 		logger.Debugf("storage nodes: %+v", c.DesiredStorage.Nodes)
 	}
 	// generally speaking, this finds nodes which are capable of running new osds
 	validNodes := k8sutil.GetValidNodes(c.DesiredStorage, c.context.Clientset, c.placement)
+	logger.Infof("SP: Valid Nodes %+v", validNodes)
 
 	// no valid node is ready to run an osd
 	if len(validNodes) == 0 {
@@ -169,8 +176,11 @@ func (c *Cluster) Start() error {
 	logger.Infof("%d of the %d storage nodes are valid", len(validNodes), len(c.DesiredStorage.Nodes))
 	c.ValidStorage.Nodes = validNodes
 
+	logger.Infof("SP: Valid Storage nodes  %+v", c.ValidStorage.Nodes)
+
 	// start the jobs to provision the OSD devices and directories
 	config := newProvisionConfig()
+	logger.Infof("SP: Provision Config  %+v", config)
 	logger.Infof("start provisioning the osds on nodes, if needed")
 	c.startProvisioning(config)
 
@@ -192,6 +202,8 @@ func (c *Cluster) Start() error {
 }
 
 func (c *Cluster) startProvisioning(config *provisionConfig) {
+
+	logger.Infof("SP: Starting Provision")
 	if len(c.dataDirHostPath) == 0 {
 		logger.Warningf("skipping osd provisioning where no dataDirHostPath is set")
 		return
@@ -219,8 +231,11 @@ func (c *Cluster) startProvisioning(config *provisionConfig) {
 		}
 
 		// create the job that prepares osds on the node
+
 		storeConfig := osdconfig.ToStoreConfig(n.Config)
 		metadataDevice := osdconfig.MetadataDevice(n.Config)
+		logger.Infof("SP: Store Config  %+v", storeConfig)
+		logger.Infof("SP: Metadata Config  %+v", metadataDevice)
 		job, err := c.makeJob(n.Name, n.Devices, n.Selection, n.Resources, storeConfig, metadataDevice, n.Location)
 		if err != nil {
 			message := fmt.Sprintf("failed to create prepare job node %s: %v", n.Name, err)

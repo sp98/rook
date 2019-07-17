@@ -33,12 +33,12 @@ import (
 	"github.com/rook/rook/pkg/operator/ceph/csi"
 	"github.com/rook/rook/pkg/operator/ceph/file"
 	"github.com/rook/rook/pkg/operator/ceph/object"
-	"github.com/rook/rook/pkg/operator/ceph/object/user"
+	objectuser "github.com/rook/rook/pkg/operator/ceph/object/user"
 	"github.com/rook/rook/pkg/operator/ceph/pool"
 	"github.com/rook/rook/pkg/operator/ceph/provisioner"
 	"github.com/rook/rook/pkg/operator/discover"
 	"github.com/rook/rook/pkg/operator/k8sutil"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/sig-storage-lib-external-provisioner/controller"
 )
 
@@ -85,10 +85,13 @@ func New(context *clusterd.Context, volumeAttachmentWrapper attachment.Attachmen
 // Run the operator instance
 func (o *Operator) Run() error {
 
+	logger.Info("SP: Start Running ROOK Operator")
 	namespace := os.Getenv(k8sutil.PodNamespaceEnvVar)
 	if namespace == "" {
 		return fmt.Errorf("Rook operator namespace is not provided. Expose it via downward API in the rook operator manifest file using environment variable %s", k8sutil.PodNamespaceEnvVar)
 	}
+
+	logger.Infof("SP: Namespace - %s", namespace)
 
 	rookAgent := agent.New(o.context.Clientset)
 
@@ -105,6 +108,8 @@ func (o *Operator) Run() error {
 	if err != nil {
 		return fmt.Errorf("Error getting server version: %v", err)
 	}
+
+	logger.Infof("SP: Server Version - %+v", serverVersion)
 
 	if serverVersion.Major >= csi.KubeMinMajor && serverVersion.Minor >= csi.KubeMinMinor && csi.CSIEnabled() {
 		logger.Infof("Ceph CSI driver is enabled, validate csi param")
@@ -130,6 +135,8 @@ func (o *Operator) Run() error {
 	stopChan := make(chan struct{})
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
+	logger.Infof("SP: Provision COnfig- %+v", provisionerConfigs)
+
 	// Run volume provisioner for each of the supported configurations
 	for name, vendor := range provisionerConfigs {
 		volumeProvisioner := provisioner.New(o.context, vendor)
@@ -153,6 +160,7 @@ func (o *Operator) Run() error {
 	}
 
 	// watch for changes to the rook clusters
+	logger.Info("SP: Namespace to watch - ", namespaceToWatch)
 	o.clusterController.StartWatch(namespaceToWatch, stopChan)
 
 	for {

@@ -27,7 +27,7 @@ import (
 	"github.com/coreos/pkg/capnslog"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	apps "k8s.io/api/apps/v1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	kserrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -64,6 +64,7 @@ func New(clientset kubernetes.Interface) *Agent {
 
 // Start the agent
 func (a *Agent) Start(namespace, agentImage, serviceAccount string) error {
+	logger.Infof("SP: Starting Agent")
 	err := a.createAgentDaemonSet(namespace, agentImage, serviceAccount)
 	if err != nil {
 		return fmt.Errorf("error starting agent daemonset: %v", err)
@@ -101,6 +102,12 @@ func (a *Agent) createAgentDaemonSet(namespace, agentImage, serviceAccount strin
 		logger.Warningf("Invalid %s value \"%s\". Defaulting to \"true\".", RookEnableFSGroupEnv, rookEnableFSGroup)
 		rookEnableFSGroup = "true"
 	}
+
+	logger.Infof("SP: flexvolumeDirPath - %+v", flexvolumeDirPath)
+	logger.Infof("SP: libModulesDirPath - %+v", libModulesDirPath)
+	logger.Infof("SP: agentMountSecurityMode - %+v", agentMountSecurityMode)
+	logger.Infof("SP: rookEnableSelinuxRelabeling - %+v", rookEnableSelinuxRelabeling)
+	logger.Infof("SP: rookEnableFSGroup - %+v", rookEnableFSGroup)
 
 	privileged := true
 	ds := &apps.DaemonSet{
@@ -253,14 +260,19 @@ func (a *Agent) createAgentDaemonSet(namespace, agentImage, serviceAccount strin
 	} else {
 		logger.Infof("rook-ceph-agent daemonset started")
 	}
+
+	logger.Infof("SP: Rook Agent POD spec: %+v", ds.Spec)
 	return nil
 
 }
 
 func (a *Agent) discoverFlexvolumeDir() (flexvolumeDirPath, source string) {
 	//copy flexvolume to flexvolume dir
+	logger.Infof("SP: Discovering flex volum driver")
 	nodeName := os.Getenv(k8sutil.NodeNameEnvVar)
+	logger.Infof("SP: Node name %s", nodeName)
 	if nodeName == "" {
+		logger.Infof("SP: Node name env is empty. Getting default flex volume dir")
 		logger.Warningf("cannot detect the node name. Please provide using the downward API in the rook operator manifest file")
 		return getDefaultFlexvolumeDir()
 	}
@@ -293,6 +305,7 @@ func (a *Agent) discoverFlexvolumeDir() (flexvolumeDirPath, source string) {
 }
 
 func getDefaultFlexvolumeDir() (flexvolumeDirPath, source string) {
+	logger.Infof("SP: Getting Default Flex Volume Driver path")
 	logger.Infof("getting flexvolume dir path from %s env var", flexvolumePathDirEnv)
 	flexvolumeDirPath = os.Getenv(flexvolumePathDirEnv)
 	if flexvolumeDirPath != "" {

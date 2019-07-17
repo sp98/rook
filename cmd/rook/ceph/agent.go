@@ -43,6 +43,8 @@ func startAgent(cmd *cobra.Command, args []string) error {
 
 	rook.LogStartupInfo(agentCmd.Flags())
 
+	logger.Info("SP: Running Ceph Agent")
+
 	clientset, apiExtClientset, rookClientset, err := rook.GetClientset()
 	if err != nil {
 		rook.TerminateFatal(fmt.Errorf("failed to get k8s client. %+v", err))

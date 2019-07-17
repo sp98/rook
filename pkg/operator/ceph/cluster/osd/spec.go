@@ -76,6 +76,8 @@ func (c *Cluster) makeJob(nodeName string, devices []rookalpha.Device,
 	k8sutil.AddRookVersionLabelToJob(job)
 	opspec.AddCephVersionLabelToJob(c.clusterInfo.CephVersion, job)
 	k8sutil.SetOwnerRef(c.context.Clientset, c.Namespace, &job.ObjectMeta, &c.ownerRef)
+
+	logger.Infof("SP: OSD prepare Job format: %+v", job)
 	return job, nil
 }
 
@@ -410,6 +412,8 @@ func (c *Cluster) provisionPodTemplateSpec(devices []rookalpha.Device, selection
 	// ceph-volume --dmcrypt uses cryptsetup that synchronizes with udev on
 	// host through semaphore
 	podSpec.HostIPC = storeConfig.EncryptedDevice
+
+	logger.Infof("SP: POD spec for OSD prepare POD  %+v", podSpec)
 
 	return &v1.PodTemplateSpec{
 		ObjectMeta: podMeta,

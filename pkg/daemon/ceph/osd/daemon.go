@@ -82,6 +82,8 @@ func RunFilestoreOnDevice(context *clusterd.Context, mountSourcePath, mountPath 
 
 func Provision(context *clusterd.Context, agent *OsdAgent) error {
 	// set the initial orchestration status
+
+	logger.Infof("SP: Provison OSD")
 	status := oposd.OrchestrationStatus{Status: oposd.OrchestrationStatusComputingDiff}
 	if err := oposd.UpdateNodeStatus(agent.kv, agent.nodeName, status); err != nil {
 		return err
@@ -106,6 +108,8 @@ func Provision(context *clusterd.Context, agent *OsdAgent) error {
 	}
 	context.Devices = rawDevices
 
+	logger.Infof("SP: Raw Devices  %+v", context.Devices)
+
 	logger.Infof("creating and starting the osds")
 
 	// determine the set of devices that can/should be used for OSDs.
@@ -113,6 +117,8 @@ func Provision(context *clusterd.Context, agent *OsdAgent) error {
 	if err != nil {
 		return fmt.Errorf("failed to get available devices. %+v", err)
 	}
+
+	logger.Infof("SP: Available Devices  %+v", devices)
 
 	// determine the set of removed OSDs and the node's crush name (if needed)
 	removedDevicesScheme, _, err := getRemovedDevices(agent)
@@ -172,6 +178,8 @@ func Provision(context *clusterd.Context, agent *OsdAgent) error {
 	if err := oposd.UpdateNodeStatus(agent.kv, agent.nodeName, status); err != nil {
 		return err
 	}
+
+	logger.Infof("SP: OSDS %+v", osds)
 
 	return nil
 }
