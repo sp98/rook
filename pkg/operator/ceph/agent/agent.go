@@ -208,6 +208,7 @@ func (a *Agent) createAgentDaemonSet(namespace, agentImage, serviceAccount strin
 
 	// Add agent mounts if any given through environment
 	agentMounts := os.Getenv(agentMountsEnv)
+	logger.Infof("Agent Mounts - %+v", agentMounts)
 	if agentMounts != "" {
 		mounts := strings.Split(agentMounts, ",")
 		for _, mount := range mounts {

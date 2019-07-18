@@ -46,6 +46,7 @@ func init() {
 }
 
 func startDiscover(cmd *cobra.Command, args []string) error {
+	fmt.Println("SP: Starting Discover-")
 	rook.SetLogLevel()
 
 	rook.LogStartupInfo(discoverCmd.Flags())

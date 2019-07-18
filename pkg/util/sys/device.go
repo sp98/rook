@@ -91,17 +91,24 @@ func ListDevices(executor exec.Executor) ([]string, error) {
 }
 
 func GetDevicePartitions(device string, executor exec.Executor) (partitions []Partition, unusedSpace uint64, err error) {
+	logger.Info("SP- Getting device partitionss")
+
 	cmd := fmt.Sprintf("lsblk /dev/%s", device)
+	logger.Infof("SP- Running command - %+v", cmd)
 	output, err := executor.ExecuteCommandWithOutput(false, cmd, "lsblk", fmt.Sprintf("/dev/%s", device),
 		"--bytes", "--pairs", "--output", "NAME,SIZE,TYPE,PKNAME")
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get device %s partitions. %+v", device, err)
 	}
+
 	partInfo := strings.Split(output, "\n")
+	logger.Infof("SP: device partition info: %+v", partInfo)
+
 	var deviceSize uint64
 	var totalPartitionSize uint64
 	for _, info := range partInfo {
 		props := parseKeyValuePairString(info)
+		logger.Infof("SP: device partition info: %+v", props)
 		name := props["NAME"]
 		if name == device {
 			// found the main device
@@ -139,6 +146,9 @@ func GetDevicePartitions(device string, executor exec.Executor) (partitions []Pa
 	if deviceSize > 0 {
 		unusedSpace = deviceSize - totalPartitionSize
 	}
+
+	logger.Infof("SP: Total Partitions - %+v", partitions)
+	logger.Infof("SP: Unused Space - %+v", unusedSpace)
 	return partitions, unusedSpace, nil
 }
 
@@ -147,6 +157,7 @@ func GetDeviceProperties(device string, executor exec.Executor) (map[string]stri
 }
 
 func GetDevicePropertiesFromPath(devicePath string, executor exec.Executor) (map[string]string, error) {
+	logger.Info("SP: getting device properties for device at path - %+v", devicePath)
 	cmd := fmt.Sprintf("lsblk %s", devicePath)
 	output, err := executor.ExecuteCommandWithOutput(false, cmd, "lsblk", devicePath,
 		"--bytes", "--nodeps", "--pairs", "--output", "SIZE,ROTA,RO,TYPE,PKNAME")
@@ -371,6 +382,7 @@ func parseKeyValuePairString(propsRaw string) map[string]string {
 		}
 	}
 
+	logger.Infof("SP: Device path properties - %+v", propMap)
 	return propMap
 }
 

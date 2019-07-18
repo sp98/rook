@@ -55,17 +55,20 @@ func ignoreDevice(d string) bool {
 
 // Discover all the details of devices available on the local node
 func DiscoverDevices(executor exec.Executor) ([]*sys.LocalDisk, error) {
-
+	logger.Info("SP: discovering devices")
 	var disks []*sys.LocalDisk
 	devices, err := sys.ListDevices(executor)
+	logger.Infof("SP: Total Listed devices - %+v", devices)
 	if err != nil {
 		return nil, err
 	}
 
+	logger.Infof("SP: Supported Disk types: %+v ::  %+v ::   %+v ::   %+v", sys.SSDType, sys.CryptType, sys.DiskType, sys.PartType)
 	for _, d := range devices {
 
 		if ignoreDevice(d) {
 			// skip device
+			logger.Infof("SP: Should device - %+v be ignored %+v", d, ignoreDevice(d))
 			continue
 		}
 
@@ -76,6 +79,7 @@ func DiscoverDevices(executor exec.Executor) ([]*sys.LocalDisk, error) {
 		}
 
 		diskType, ok := diskProps["TYPE"]
+		logger.Infof("SP: Disk type for device %+v is %+v", d, diskType)
 		if !ok || (diskType != sys.SSDType && diskType != sys.CryptType && diskType != sys.DiskType && diskType != sys.PartType) {
 			// unsupported disk type, just continue
 			continue
@@ -85,6 +89,7 @@ func DiscoverDevices(executor exec.Executor) ([]*sys.LocalDisk, error) {
 		var diskUUID string
 		if diskType != sys.PartType {
 			diskUUID, err = sys.GetDiskUUID(d, executor)
+			logger.Infof("SP: Disk UUID for device %+v is %+v", d, diskUUID)
 			if err != nil {
 				logger.Warningf("device %s has an unknown uuid. %+v", d, err)
 				continue
@@ -151,5 +156,6 @@ func DiscoverDevices(executor exec.Executor) ([]*sys.LocalDisk, error) {
 		disks = append(disks, disk)
 	}
 
+	logger.Infof("SP: List of available disks - %+v", disks)
 	return disks, nil
 }

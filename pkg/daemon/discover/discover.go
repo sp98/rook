@@ -34,7 +34,7 @@ import (
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	"github.com/rook/rook/pkg/util/sys"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -54,6 +54,8 @@ var (
 )
 
 func Run(context *clusterd.Context, probeInterval time.Duration) error {
+	logger.Info("SP: Running Discover code")
+
 	if context == nil {
 		return fmt.Errorf("nil context")
 	}
@@ -61,6 +63,11 @@ func Run(context *clusterd.Context, probeInterval time.Duration) error {
 	nodeName = os.Getenv(k8sutil.NodeNameEnvVar)
 	namespace = os.Getenv(k8sutil.PodNamespaceEnvVar)
 	cmName = k8sutil.TruncateNodeName(LocalDiskCMName, nodeName)
+
+	logger.Infof("SP: Node Name: %+v", nodeName)
+	logger.Infof("SP: namespace: %+v", namespace)
+	logger.Infof("SP: cmName: %+v", cmName)
+
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc, syscall.SIGTERM)
 	err := updateDeviceCM(context)
@@ -69,6 +76,7 @@ func Run(context *clusterd.Context, probeInterval time.Duration) error {
 		return err
 	}
 
+	//Keep checking when a new device is added or not
 	udevEvents := make(chan string)
 	go udevBlockMonitor(udevEvents, udevEventPeriod)
 
@@ -81,6 +89,7 @@ func Run(context *clusterd.Context, probeInterval time.Duration) error {
 			updateDeviceCM(context)
 		case _, ok := <-udevEvents:
 			if ok {
+				logger.Info("SP: Received a Udev Event")
 				logger.Info("trigger probe from udev event")
 				updateDeviceCM(context)
 			} else {
@@ -92,6 +101,7 @@ func Run(context *clusterd.Context, probeInterval time.Duration) error {
 }
 
 func matchUdevEvent(text string, matches, exclusions []string) (bool, error) {
+	logger.Info("SP: Matching Udev Event")
 	for _, match := range matches {
 		matched, err := regexp.MatchString(match, text)
 		if err != nil {
@@ -124,6 +134,8 @@ func matchUdevEvent(text string, matches, exclusions []string) (bool, error) {
 func rawUdevBlockMonitor(c chan string, matches, exclusions []string) {
 	defer close(c)
 
+	logger.Infof("SP: Raw Udev Block device!")
+
 	// stdbuf -oL performs line bufferred output
 	cmd := exec.Command("stdbuf", "-oL", "udevadm", "monitor", "-u", "-k", "-s", "block")
 	stdout, err := cmd.StdoutPipe()
@@ -141,6 +153,7 @@ func rawUdevBlockMonitor(c chan string, matches, exclusions []string) {
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
 		text := scanner.Text()
+		logger.Info("SP: udevadm monitor: %s", text)
 		logger.Debugf("udevadm monitor: %s", text)
 		match, err := matchUdevEvent(text, matches, exclusions)
 		if err != nil {
@@ -219,7 +232,9 @@ func DeviceListsEqual(a, b string) (bool, error) {
 }
 
 func updateDeviceCM(context *clusterd.Context) error {
+
 	logger.Infof("updating device configmap")
+	logger.Infof("SP: updating device configmap")
 	devices, err := probeDevices(context)
 	if err != nil {
 		logger.Infof("failed to probe devices: %v", err)
@@ -231,11 +246,14 @@ func updateDeviceCM(context *clusterd.Context) error {
 		return err
 	}
 	deviceStr := string(deviceJson)
+	logger.Infof("SP: All devices string - %+v", deviceStr)
 	if cm == nil {
+		logger.Info("SP: Cm is Nil. Get CM")
 		cm, err = context.Clientset.CoreV1().ConfigMaps(namespace).Get(cmName, metav1.GetOptions{})
 	}
 	if err == nil {
 		lastDevice = cm.Data[LocalDiskCMData]
+		logger.Infof("SP: last devices %s", lastDevice)
 		logger.Debugf("last devices %s", lastDevice)
 	} else {
 		if !errors.IsNotFound(err) {
@@ -257,6 +275,8 @@ func updateDeviceCM(context *clusterd.Context) error {
 			},
 			Data: data,
 		}
+
+		logger.Infof("SP: Config map for devices - %+v", cm)
 		cm, err = context.Clientset.CoreV1().ConfigMaps(namespace).Create(cm)
 		if err != nil {
 			logger.Infof("failed to create configmap: %v", err)
@@ -282,6 +302,7 @@ func updateDeviceCM(context *clusterd.Context) error {
 }
 
 func probeDevices(context *clusterd.Context) ([]sys.LocalDisk, error) {
+	logger.Infof("Probing DeviceS")
 	devices := make([]sys.LocalDisk, 0)
 	localDevices, err := clusterd.DiscoverDevices(context.Executor)
 	if err != nil {
@@ -315,5 +336,6 @@ func probeDevices(context *clusterd.Context) ([]sys.LocalDisk, error) {
 	}
 
 	logger.Infof("available devices: %+v", devices)
+	logger.Infof("SP: available devices: %+v", devices)
 	return devices, nil
 }

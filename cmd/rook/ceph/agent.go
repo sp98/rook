@@ -43,7 +43,7 @@ func startAgent(cmd *cobra.Command, args []string) error {
 
 	rook.LogStartupInfo(agentCmd.Flags())
 
-	logger.Info("SP: Running Ceph Agent")
+	logger.Info("SP: Starting Ceph Agent")
 
 	clientset, apiExtClientset, rookClientset, err := rook.GetClientset()
 	if err != nil {

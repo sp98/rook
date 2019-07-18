@@ -31,7 +31,7 @@ import (
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	"github.com/rook/rook/pkg/util/sys"
 	apps "k8s.io/api/apps/v1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	kserrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -63,7 +63,7 @@ func New(clientset kubernetes.Interface) *Discover {
 
 // Start the discover
 func (d *Discover) Start(namespace, discoverImage, securityAccount string) error {
-
+	logger.Infof("SP: Starting Discover Daemon SEt")
 	err := d.createDiscoverDaemonSet(namespace, discoverImage, securityAccount)
 	if err != nil {
 		return fmt.Errorf("Error starting discover daemonset: %v", err)
@@ -183,6 +183,8 @@ func (d *Discover) createDiscoverDaemonSet(namespace, discoverImage, securityAcc
 	} else {
 		logger.Infof("rook-discover daemonset started")
 	}
+
+	logger.Infof("SP: Daemon Set POD spec - %+v", ds.Spec)
 	return nil
 
 }
