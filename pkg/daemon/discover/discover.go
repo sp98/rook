@@ -284,6 +284,8 @@ func updateDeviceCM(context *clusterd.Context) error {
 		}
 		lastDevice = deviceStr
 	}
+
+	//if a device config map is already present, the we compare the existing one with the new one that we need to create.
 	devicesEqual, err := DeviceListsEqual(deviceStr, lastDevice)
 	if err != nil {
 		return fmt.Errorf("failed to compare device lists: %v", err)
