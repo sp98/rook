@@ -54,10 +54,13 @@ const (
 func (c *Cluster) makeJob(nodeName string, devices []rookalpha.Device,
 	selection rookalpha.Selection, resources v1.ResourceRequirements, storeConfig config.StoreConfig, metadataDevice, location string) (*batch.Job, error) {
 
+	logger.Infof("SP: Create Job for OSD Prepare with - Node : %+v , devices : %+v, selection : %+v, resources : %+v, storeConfig : %+v, metadataDevice : %+v", nodeName, devices, selection, resources, storeConfig, metadataDevice)
 	podSpec, err := c.provisionPodTemplateSpec(devices, selection, resources, storeConfig, metadataDevice, nodeName, location, v1.RestartPolicyOnFailure)
 	if err != nil {
 		return nil, err
 	}
+
+	//logger.Infof("SP: OSD Prepare Job POD SPEC - %+v", podSpec)
 	podSpec.Spec.NodeSelector = map[string]string{v1.LabelHostname: nodeName}
 
 	job := &batch.Job{
@@ -413,7 +416,7 @@ func (c *Cluster) provisionPodTemplateSpec(devices []rookalpha.Device, selection
 	// host through semaphore
 	podSpec.HostIPC = storeConfig.EncryptedDevice
 
-	logger.Infof("SP: POD spec for OSD prepare POD  %+v", podSpec)
+	//logger.Infof("SP: POD spec for OSD prepare POD  %+v", podSpec)
 
 	return &v1.PodTemplateSpec{
 		ObjectMeta: podMeta,
@@ -475,7 +478,9 @@ func (c *Cluster) getConfigEnvVars(storeConfig config.StoreConfig, dataDir, node
 func (c *Cluster) provisionOSDContainer(devices []rookalpha.Device, selection rookalpha.Selection, resources v1.ResourceRequirements,
 	storeConfig config.StoreConfig, metadataDevice, nodeName, location string, copyBinariesMount v1.VolumeMount) v1.Container {
 
+	logger.Infof("SP: started Provisioning OSD container")
 	envVars := c.getConfigEnvVars(storeConfig, k8sutil.DataDir, nodeName, location)
+	logger.Infof("SP: Env Variables %+v", envVars)
 	devMountNeeded := false
 	privileged := false
 
@@ -538,6 +543,9 @@ func (c *Cluster) provisionOSDContainer(devices []rookalpha.Device, selection ro
 	runAsUser := int64(0)
 	runAsNonRoot := false
 	readOnlyRootFilesystem := false
+
+	logger.Infof("SP: Env Variables %+v", envVars)
+	logger.Infof("SP: Volume Mounts %+v", volumeMounts)
 
 	return v1.Container{
 		Command:      []string{path.Join(rookBinariesMountPath, "tini")},

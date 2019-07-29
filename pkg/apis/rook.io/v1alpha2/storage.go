@@ -15,6 +15,8 @@ limitations under the License.
 */
 package v1alpha2
 
+import "fmt"
+
 // AnyUseAllDevices gets whether to use all devices
 func (s *StorageScopeSpec) AnyUseAllDevices() bool {
 	if s.Selection.GetUseAllDevices() {
@@ -47,6 +49,7 @@ func (s *StorageScopeSpec) ClearUseAllDevices() {
 // 3) Default values (if no config exists for the node or cluster)
 func (s *StorageScopeSpec) ResolveNode(nodeName string) *Node {
 	// find the requested storage node first, if it exists
+	fmt.Println("SP: Resovling Node - ", nodeName)
 	var node *Node
 	for i := range s.Nodes {
 		if s.Nodes[i].Name == nodeName {
@@ -71,6 +74,7 @@ func (s *StorageScopeSpec) ResolveNode(nodeName string) *Node {
 }
 
 func (s *StorageScopeSpec) resolveNodeSelection(node *Node) {
+	fmt.Println("SP: Resovling Node Selection")
 	if node.Selection.UseAllDevices == nil {
 		if s.Selection.UseAllDevices != nil {
 			// the node does not have a value specified for use all devices, but the cluster does. Use the cluster's.

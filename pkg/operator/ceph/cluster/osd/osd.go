@@ -138,13 +138,15 @@ func (c *Cluster) Start() error {
 	}
 
 	logger.Infof("start running osds in namespace %s", c.Namespace)
+	logger.Infof("SP: Use all Nodes ? - %+v", c.DesiredStorage.UseAllNodes)
+	logger.Infof("SP: Desired Nodes  ? - %+v", c.DesiredStorage.Nodes)
 
 	if c.DesiredStorage.UseAllNodes == false && len(c.DesiredStorage.Nodes) == 0 {
 		logger.Warningf("useAllNodes is set to false and no nodes are specified, no OSD pods are going to be created")
 	}
 
 	if c.DesiredStorage.UseAllNodes {
-		// Get the list of all nodes in the cluster. The placement settings will be applied below.
+		// Get the list of all nodes in the cluster, eg map[master:master worker0:worker0]. The placement settings will be applied below.
 		hostnameMap, err := k8sutil.GetNodeHostNames(c.context.Clientset)
 		logger.Infof("SP: HostnameMap: %+v", hostnameMap)
 		if err != nil {
@@ -203,7 +205,8 @@ func (c *Cluster) Start() error {
 
 func (c *Cluster) startProvisioning(config *provisionConfig) {
 
-	logger.Infof("SP: Starting Provision")
+	logger.Infof("SP: Starting OSD Provision")
+	logger.Infof("SP: Data Dir Host path - %+v", c.dataDirHostPath)
 	if len(c.dataDirHostPath) == 0 {
 		logger.Warningf("skipping osd provisioning where no dataDirHostPath is set")
 		return
@@ -213,6 +216,8 @@ func (c *Cluster) startProvisioning(config *provisionConfig) {
 	for _, node := range c.ValidStorage.Nodes {
 		// fully resolve the storage config and resources for this node
 		n := c.resolveNode(node.Name)
+
+		logger.Infof("SP: fulling resolved Node %+v", n)
 		if n == nil {
 			logger.Warningf("node %s did not resolve", node.Name)
 			continue
@@ -521,5 +526,6 @@ func (c *Cluster) resolveNode(nodeName string) *rookalpha.Node {
 	}
 	rookNode.Resources = k8sutil.MergeResourceRequirements(rookNode.Resources, c.resources)
 
+	logger.Infof("SP: rookNode: %+v", rookNode)
 	return rookNode
 }

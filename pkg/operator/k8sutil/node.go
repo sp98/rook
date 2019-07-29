@@ -37,6 +37,7 @@ var validTopologyLabelKeys = []string{
 // ValidNode returns true if the node (1) is schedulable, (2) meets Rook's placement terms, and
 // (3) is ready. False otherwise.
 func ValidNode(node v1.Node, placement rookalpha.Placement) (bool, error) {
+	logger.Infof("SP: checking validity of the Node - %+v", node.Name)
 	if !GetNodeSchedulable(node) {
 		return false, nil
 	}
@@ -45,11 +46,14 @@ func ValidNode(node v1.Node, placement rookalpha.Placement) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("failed to check if node meets Rook placement terms. %+v", err)
 	}
+
+	logger.Infof("SP: Does node - %+v meet the placement Terms- %+v", node.Name, p)
 	if !p {
 		return false, nil
 	}
 
 	if !NodeIsReady(node) {
+		logger.Infof("SP:  node - %+v  is not ready", node.Name)
 		return false, nil
 	}
 
@@ -59,12 +63,17 @@ func ValidNode(node v1.Node, placement rookalpha.Placement) (bool, error) {
 // GetValidNodes returns all nodes that (1) are not cordoned, (2) meet Rook's placement terms, and
 // (3) are ready.
 func GetValidNodes(rookStorage rookalpha.StorageScopeSpec, clientset kubernetes.Interface, placement rookalpha.Placement) []rookalpha.Node {
+	logger.Info("SP: Inside Get Valid Storage Nodes")
+	//logger.Infof("SP: Rook STorage Nodes %+v", rookStorage.Nodes)
+
 	matchingK8sNodes, err := GetKubernetesNodesMatchingRookNodes(rookStorage.Nodes, clientset)
 	if err != nil {
 		// cannot list nodes, return empty nodes
 		logger.Errorf("failed to list nodes: %+v", err)
 		return []rookalpha.Node{}
 	}
+
+	logger.Infof("SP: Matching K8 nodes  %+v", matchingK8sNodes)
 
 	validK8sNodes := []v1.Node{}
 	for _, n := range matchingK8sNodes {
@@ -147,6 +156,9 @@ func NodeMeetsPlacementTerms(node v1.Node, placement rookalpha.Placement, ignore
 // node's usability.
 func NodeMeetsAffinityTerms(node v1.Node, affinity *v1.NodeAffinity) (bool, error) {
 	// Terms are met automatically if relevant terms aren't set
+	logger.Infof("SP: checking if node meets affinity")
+	logger.Infof("SP: Node - %+v  ", node)
+	logger.Infof("SP: affinity - %+v  ", affinity)
 	if affinity == nil || affinity.RequiredDuringSchedulingIgnoredDuringExecution == nil {
 		return true, nil
 	}
@@ -215,6 +227,7 @@ func GetKubernetesNodesMatchingRookNodes(rookNodes []rookalpha.Node, clientset k
 	nodeOptions := metav1.ListOptions{}
 	nodeOptions.TypeMeta.Kind = "Node"
 	k8sNodes, err := clientset.CoreV1().Nodes().List(nodeOptions)
+	logger.Infof("SP: All K8 Nodes - %+v", k8sNodes)
 	if err != nil {
 		return nodes, fmt.Errorf("failed to list kubernetes nodes. %+v", err)
 	}
