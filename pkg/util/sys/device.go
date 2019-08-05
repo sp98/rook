@@ -194,6 +194,8 @@ func GetDeviceFilesystems(device string, executor exec.Executor) (string, error)
 		return "", fmt.Errorf("command %s failed: %+v", cmd, err)
 	}
 
+	logger.Infof("SP: Udev output for the device - %s is : %+v", device, output)
+
 	return parseFS(output), nil
 }
 
@@ -308,10 +310,12 @@ func UnmountDevice(devicePath string, executor exec.Executor) error {
 func CheckIfDeviceAvailable(executor exec.Executor, name string) (int, bool, string, error) {
 	ownPartitions := true
 	partitions, _, err := GetDevicePartitions(name, executor)
+	logger.Info("SP: partitions for the device - %s is : %+v", name, partitions)
 	if err != nil {
 		return 0, false, "", fmt.Errorf("failed to get %s partitions. %+v", name, err)
 	}
 	partCount := len(partitions)
+	logger.Infof("SP: Total Partitions in the devie - %s is : %d", name, partCount)
 	if !RookOwnsPartitions(partitions) {
 		ownPartitions = false
 	}
@@ -330,6 +334,7 @@ func RookOwnsPartitions(partitions []Partition) bool {
 	// if there are partitions, they must all have the rook osd label
 	ownPartitions := true
 	for _, p := range partitions {
+		logger.Infof("SP: checking of the partition %+v is owned by Rook", p)
 		if strings.HasPrefix(p.Label, "ROOK-OSD") {
 			logger.Infof("rook partition: %s", p.Label)
 		} else {

@@ -18,6 +18,7 @@ limitations under the License.
 package osd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -51,6 +52,11 @@ const (
 	osdMemoryTargetSafetyFactor float32 = 0.8
 )
 
+func prettyPrint(i interface{}) string {
+	s, _ := json.MarshalIndent(i, "", "\t")
+	return string(s)
+}
+
 func (c *Cluster) makeJob(nodeName string, devices []rookalpha.Device,
 	selection rookalpha.Selection, resources v1.ResourceRequirements, storeConfig config.StoreConfig, metadataDevice, location string) (*batch.Job, error) {
 
@@ -80,7 +86,7 @@ func (c *Cluster) makeJob(nodeName string, devices []rookalpha.Device,
 	opspec.AddCephVersionLabelToJob(c.clusterInfo.CephVersion, job)
 	k8sutil.SetOwnerRef(c.context.Clientset, c.Namespace, &job.ObjectMeta, &c.ownerRef)
 
-	logger.Infof("SP: OSD prepare Job format: %+v", job)
+	logger.Infof("SP: OSD prepare Job format: %+v", prettyPrint(job))
 	return job, nil
 }
 

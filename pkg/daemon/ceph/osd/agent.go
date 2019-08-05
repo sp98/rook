@@ -147,7 +147,10 @@ func (a *OsdAgent) removeDirs(context *clusterd.Context, removedDirs map[string]
 
 func (a *OsdAgent) configureDevices(context *clusterd.Context, devices *DeviceOsdMapping) ([]oposd.OSDInfo, error) {
 
+	logger.Infof("SP: congifure devices on %+v", devices)
+	//Check if the ceph volume is available
 	cvSupported, err := getCephVolumeSupported(context)
+	logger.Info("SP: Ceph volume supported!", cvSupported)
 	if err != nil {
 		logger.Errorf("failed to detect if ceph-volume is available. %+v", err)
 	}
@@ -158,6 +161,7 @@ func (a *OsdAgent) configureDevices(context *clusterd.Context, devices *DeviceOs
 
 	var osds []oposd.OSDInfo
 	if devices == nil || len(devices.Entries) == 0 {
+		logger.Infof("SP: No more devices to configure as devices is Nill. So getting the existing device osd mapping")
 		logger.Infof("no more devices to configure")
 		if cvSupported {
 			return getCephVolumeOSDs(context, a.cluster.Name, a.cluster.FSID)
@@ -171,6 +175,7 @@ func (a *OsdAgent) configureDevices(context *clusterd.Context, devices *DeviceOs
 	// compute an OSD layout scheme that will optimize performance
 	scheme, cvDevices, err := a.getPartitionPerfScheme(context, devices, cvSupported)
 	logger.Debugf("partition scheme: %+v, err: %+v", scheme, err)
+	logger.Infof("SP: partition scheme: %+v, err: %+v", scheme, err)
 	if err != nil {
 		return osds, fmt.Errorf("failed to get OSD partition scheme: %+v", err)
 	}
@@ -186,6 +191,7 @@ func (a *OsdAgent) configureDevices(context *clusterd.Context, devices *DeviceOs
 	for _, entry := range scheme.Entries {
 		config := &osdConfig{id: entry.ID, uuid: entry.OsdUUID, configRoot: context.ConfigDir,
 			partitionScheme: entry, storeConfig: a.storeConfig, kv: a.kv, storeName: config.GetConfigStoreName(a.nodeName)}
+		logger.Infof("SP: Config - %+v", config)
 		osd, err := a.prepareOSD(context, config)
 		if err != nil {
 			return osds, fmt.Errorf("failed to config osd %d. %+v", entry.ID, err)

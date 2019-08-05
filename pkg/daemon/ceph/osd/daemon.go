@@ -194,14 +194,20 @@ func getAvailableDevices(context *clusterd.Context, desiredDevices []DesiredDevi
 	}
 
 	for _, device := range context.Devices {
+		logger.Info("SP: Inside get Available devices loop for %+v", device)
 		if device.Type == sys.PartType {
 			continue
 		}
+		//Check the partition count side the device and also see if the rook owns the partition or not!
 		partCount, ownPartitions, fs, err := sys.CheckIfDeviceAvailable(context.Executor, device.Name)
+		logger.Infof("SP: Partition Count: %+v", partCount)
+		logger.Infof("SP: Rook owns the partition: %+v", ownPartitions)
+		logger.Infof("SP: File System %+v", fs)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get device %s info. %+v", device.Name, err)
 		}
 
+		//Skip devices that already has a file system or if it has partition and rook does not own it!
 		if fs != "" || !ownPartitions {
 			// not OK to use the device because it has a filesystem or rook doesn't own all its partitions
 			logger.Infof("skipping device %s that is in use (not by rook). fs: %s, ownPartitions: %t", device.Name, fs, ownPartitions)
@@ -255,6 +261,8 @@ func getAvailableDevices(context *clusterd.Context, desiredDevices []DesiredDevi
 			available.Entries[device.Name] = deviceInfo
 		}
 	}
+
+	logger.Infof("SP: List of available devices - %+v", available)
 
 	return available, nil
 }

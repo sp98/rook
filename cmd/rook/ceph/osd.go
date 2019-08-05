@@ -17,6 +17,7 @@ limitations under the License.
 package ceph
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -285,6 +286,7 @@ func prepareOSD(cmd *cobra.Command, args []string) error {
 	agent := osddaemon.NewAgent(context, dataDevices, cfg.metadataDevice, cfg.directories, forceFormat,
 		crushLocation, cfg.storeConfig, &clusterInfo, cfg.nodeName, kv)
 
+	logger.Infof("SP: Agent for provisioning the ODS - %+v", prettyPrint(agent))
 	err = osddaemon.Provision(context, agent)
 	if err != nil {
 		// something failed in the OSD orchestration, update the status map with failure details
@@ -298,6 +300,11 @@ func prepareOSD(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+func prettyPrint(i interface{}) string {
+	s, _ := json.MarshalIndent(i, "", "\t")
+	return string(s)
 }
 
 func commonOSDInit(cmd *cobra.Command) {
