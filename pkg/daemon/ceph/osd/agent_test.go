@@ -270,6 +270,8 @@ func testOSDAgentWithDevicesHelper(t *testing.T, storeConfig config.StoreConfig,
 		assert.Equal(t, 10, outputExecCount)
 		assert.Equal(t, 10, execCount) // 1 for remount sdx, 1 osd mkfs for sdx, 3 partition steps for sdy, 1 mkfs for sdy, 1 mount for sdy, 1 osd mkfs for sdy
 	}
+
+	t.Fatal("f")
 }
 
 func TestOSDAgentNoDevices(t *testing.T) {
