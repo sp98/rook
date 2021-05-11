@@ -19,7 +19,9 @@ package clusterdisruption
 import (
 	"reflect"
 
+	"github.com/rook/rook/pkg/operator/ceph/cluster/osd"
 	"github.com/rook/rook/pkg/operator/ceph/disruption/controllerconfig"
+	"github.com/rook/rook/pkg/operator/k8sutil"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -32,7 +34,7 @@ import (
 
 	"github.com/pkg/errors"
 	cephv1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -87,42 +89,44 @@ func Add(mgr manager.Manager, context *controllerconfig.Context) error {
 		return err
 	}
 
-	// Only reconcile for PDB update event when allowed disruptions for the main OSD PDB is 0.
 	// This means that one of the OSD is down due to node drain or any other reason
-	pdbPredicate := predicate.Funcs{
+	osdPredicate := predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			// Do not reconcile when PDB is created
+			// Do not reconcile when OSD is created
 			return false
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			pdb, ok := e.ObjectNew.DeepCopyObject().(*policyv1beta1.PodDisruptionBudget)
+			osd, ok := e.ObjectNew.DeepCopyObject().(*appsv1.Deployment)
 			if !ok {
 				return false
 			}
-			return pdb.Name == osdPDBAppName && pdb.Status.DisruptionsAllowed == 0
+			logger.Debugf("osd deployment %q is updated. Unavailable replicas: %d", osd.Name, osd.Status.UnavailableReplicas)
+			return osd.Status.UnavailableReplicas > 0
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			// Do not reconcile when PDB is deleted
+			// Do not reconcile when OSD is deleted
 			return false
 		},
 	}
 
-	// Watch for main PodDisruptionBudget and enqueue the CephCluster in the namespace
+	// Watch for OSD deployment and enqueue the CephCluster in the namespace
 	err = c.Watch(
-		&source.Kind{Type: &policyv1beta1.PodDisruptionBudget{}},
+		&source.Kind{Type: &appsv1.Deployment{}},
 		handler.EnqueueRequestsFromMapFunc(handler.MapFunc(func(obj client.Object) []reconcile.Request {
-			pdb, ok := obj.(*policyv1beta1.PodDisruptionBudget)
+			deployment, ok := obj.(*appsv1.Deployment)
 			if !ok {
-				// Not a pdb, returning empty
-				logger.Errorf("PDB handler received non-PDB")
 				return []reconcile.Request{}
 			}
-			namespace := pdb.GetNamespace()
-			req := reconcile.Request{NamespacedName: types.NamespacedName{Namespace: namespace}}
+			labels := deployment.GetLabels()
+			appName, ok := labels[k8sutil.AppAttr]
+			if !ok || appName != osd.AppName {
+				return []reconcile.Request{}
+			}
+			req := reconcile.Request{NamespacedName: types.NamespacedName{Namespace: deployment.Namespace}}
 			return []reconcile.Request{req}
 		}),
 		),
-		pdbPredicate,
+		osdPredicate,
 	)
 	if err != nil {
 		return err
