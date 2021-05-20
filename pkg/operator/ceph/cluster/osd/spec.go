@@ -51,6 +51,7 @@ const (
 	blockPVCMetadataMapperInitContainer           = "blkdevmapper-metadata"
 	blockPVCWalMapperInitContainer                = "blkdevmapper-wal"
 	activatePVCOSDInitContainer                   = "activate"
+	getkeyring                                    = "keyring"
 	expandPVCOSDInitContainer                     = "expand-bluefs"
 	expandEncryptedPVCOSDInitContainer            = "expand-encrypted-bluefs"
 	encryptedPVCStatusOSDInitContainer            = "encrypted-block-status"
@@ -67,6 +68,16 @@ const (
 )
 
 const (
+	newkeyring = `
+set -ex
+
+OSD_ID=%s
+
+# create new keyring
+ceph auth get-or-create osd."$OSD_ID" mon 'allow profile osd' mgr 'allow profile osd' osd 'allow *'
+
+`
+
 	activateOSDCode = `
 set -ex
 
@@ -534,6 +545,8 @@ func (c *Cluster) makeDeployment(osdProps osdProperties, osd OSDInfo, provisionC
 		initContainers = append(initContainers, *activateOSDContainer)
 	}
 
+	initContainers = append(initContainers, c.getnewkeyring(osdID, osdProps))
+
 	// For OSD on PVC with LVM the directory does not exist yet
 	// It gets created by the 'ceph-volume lvm activate' command
 	//
@@ -781,6 +794,19 @@ func (c *Cluster) getActivateOSDInitContainer(configDir, namespace, osdID string
 	}
 
 	return volume, container
+}
+
+func (c *Cluster) getnewkeyring(osdId string, osdProps osdProperties) v1.Container {
+	return v1.Container{
+		Name:  getkeyring,
+		Image: c.spec.CephVersion.Image,
+		Command: []string{
+			"/bin/bash",
+			"-c",
+			fmt.Sprintf(newkeyring, fmt.Sprintf("%s", osdId)),
+		},
+		Resources: osdProps.resources,
+	}
 }
 
 // Currently we can't mount a block mode pv directly to a privileged container
