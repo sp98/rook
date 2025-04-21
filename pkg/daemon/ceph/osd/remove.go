@@ -265,14 +265,18 @@ func DestroyOSD(context *clusterd.Context, clusterInfo *client.ClusterInfo, id i
 	}
 	logger.Infof("successfully destroyed osd.%d", osdInfo.ID)
 
-	if isPVC && isEncrypted {
+	if isPVC {
 		// remove the dm device
 		pvcName := os.Getenv(oposd.PVCNameEnvVarName)
-		target := oposd.EncryptionDMName(pvcName, oposd.DmcryptBlockType)
-		err = removeEncryptedDevice(context, target)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to remove dm device %q", target)
+
+		if isEncrypted {
+			target := oposd.EncryptionDMName(pvcName, oposd.DmcryptBlockType)
+			err = removeEncryptedDevice(context, target)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to remove dm device %q", target)
+			}
 		}
+
 		// ceph-volume uses `/dev/mapper/*` for encrypted disks. This is not a block device. So we need to fetch the corresponding
 		// block device for cleanup using `ceph-volume lvm zap`
 		blockPath := fmt.Sprintf("/mnt/%s", pvcName)
@@ -291,6 +295,11 @@ func DestroyOSD(context *clusterd.Context, clusterInfo *client.ClusterInfo, id i
 
 	logger.Infof("%s\n", output)
 	logger.Infof("successfully zapped osd.%d path %q", osdInfo.ID, block)
+
+	defer func() {
+		logger.Info("sleeping after destroying the OSD.....")
+		time.Sleep(5 * time.Minute)
+	}()
 
 	return &oposd.OSDReplaceInfo{ID: osdInfo.ID, Path: block}, nil
 }
