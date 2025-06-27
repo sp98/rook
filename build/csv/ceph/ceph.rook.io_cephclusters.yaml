@@ -141,6 +141,8 @@ spec:
                       enabled:
                         type: boolean
                     type: object
+                  skipUserCreation:
+                    type: boolean
                 type: object
               dashboard:
                 nullable: true
