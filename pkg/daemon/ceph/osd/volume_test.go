@@ -317,6 +317,20 @@ var cephVolumeRAWLVMSymlinkTestResult = `{
 }
 `
 
+// ceph-volume raw list reports the device as a /dev/mapper/* path that is an LVM
+// logical volume (not a dmcrypt block). Regression case for issue #18318: the LV
+// must not be mistaken for an encrypted block and must be zapped directly.
+var cephVolumeRAWLVMMapperTestResult = `{
+    "0": {
+        "ceph_fsid": "4bfe8b72-5e69-4330-b6c0-4d914db8ab89",
+        "device": "/dev/mapper/ceph_cluster-ceph_data",
+        "osd_id": 0,
+        "osd_uuid": "c03d7353-96e5-4a41-98de-830dfff97d06",
+        "type": "bluestore"
+    }
+}
+`
+
 func createPVCAvailableDevices() *DeviceOsdMapping {
 	devices := &DeviceOsdMapping{
 		Entries: map[string]*DeviceOsdIDEntry{
@@ -2467,6 +2481,61 @@ func TestWipeDevicesFromOtherClusters(t *testing.T) {
 	context.Executor = executor
 	err = agent.WipeDevicesFromOtherClusters(context)
 	assert.NoError(t, err)
+
+	// `ceph-volume raw list` reports the OSD device as a /dev/mapper/* path
+	// that is an LVM logical volume (not a dmcrypt block).
+	lvMapperDevice := "/dev/mapper/ceph_cluster-ceph_data"
+	executor.MockExecuteCommandWithOutput = func(command string, args ...string) (string, error) {
+		logger.Infof("%s %v", command, args)
+		if slices.Contains(args, "raw") && slices.Contains(args, "list") {
+			return cephVolumeRAWLVMMapperTestResult, nil
+		}
+		// sys.IsLV runs lsblk on the mapper device to determine its type; report it as an LV.
+		if command == "lsblk" && slices.Contains(args, lvMapperDevice) {
+			return fmt.Sprintf(`NAME="%s" TYPE="lvm" SIZE="10737418240" ROTA="1" RO="0" PKNAME="/dev/sdc2" KNAME="/dev/dm-0" MOUNTPOINT="" FSTYPE=""`, lvMapperDevice), nil
+		}
+		// The LV must never be resolved through the dmcrypt path.
+		if command == cryptsetupBinary {
+			return "", errors.Errorf("cryptsetup must not be called for LVM logical volume %s, got %v", lvMapperDevice, args)
+		}
+		return "", errors.Errorf("unknown command %s %s", command, args)
+	}
+	zapped := false
+	executor.MockExecuteCommandWithCombinedOutput = func(command string, args ...string) (string, error) {
+		logger.Infof("%s %v", command, args)
+
+		// ZapDevice calls: stdbuf (ceph-volume lvm zap), umount, wipefs, ceph-bluestore-tool, dd
+		if command == "stdbuf" {
+			if !slices.Contains(args, "zap") || !slices.Contains(args, lvMapperDevice) {
+				return "", errors.Errorf("expected LV %s to be zapped but got %v", lvMapperDevice, args)
+			}
+			zapped = true
+			return "", nil
+		}
+		if command == "umount" {
+			return "not mounted", errors.New("not mounted")
+		}
+		if command == "wipefs" {
+			if args[1] != lvMapperDevice {
+				return "", errors.Errorf("expected LV %s to be zapped but got %v", lvMapperDevice, args)
+			}
+			return "", nil
+		}
+		if command == "ceph-bluestore-tool" {
+			return "", nil
+		}
+		if command == "dd" {
+			return "", nil
+		}
+		return "", errors.Errorf("unknown command %s %s", command, args)
+	}
+	context = &clusterd.Context{
+		Devices: []*sys.LocalDisk{{RealPath: lvMapperDevice, Type: sys.LVMType}},
+	}
+	context.Executor = executor
+	err = agent.WipeDevicesFromOtherClusters(context)
+	assert.NoError(t, err)
+	assert.True(t, zapped, "the LVM logical volume from another cluster should have been zapped")
 }
 
 func TestFindDeviceClass(t *testing.T) {

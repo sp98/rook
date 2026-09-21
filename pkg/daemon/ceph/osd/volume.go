@@ -1149,15 +1149,28 @@ func wipeEncryptedDevicesFromOtherClusters(context *clusterd.Context, currentClu
 func getOSDDiskToBeWiped(context *clusterd.Context, existingOSDDevice string) (*sys.LocalDisk, string, error) {
 	var err error
 	var encryptedBlock string
-	// encrypted OSDs have /dev/mapper/* entries. Find the real device path in case of encrypted OSDs
+	// Devices under /dev/mapper/* can be either dmcrypt blocks (encrypted OSDs) or
+	// LVM logical volumes. Only resolve the backing device for genuine dmcrypt blocks.
+	// An LVM LV must be zapped in place: treating it as an encrypted block makes
+	// "cryptsetup status" fail, so the stale device is never wiped (issue #18318).
 	if strings.Contains(existingOSDDevice, "mapper") {
-		encryptedBlock = existingOSDDevice
-		existingOSDDevice, err = GetBackingDeviceForEncryptedBlock(context, existingOSDDevice)
-		if err != nil {
-			logger.Warningf("failed to get actual device used for the dmcrypt block %q: %q", encryptedBlock, err)
-			return nil, "", nil
+		isLV, lvErr := sys.IsLV(existingOSDDevice, context.Executor)
+		if lvErr != nil {
+			logger.Warningf("failed to determine if mapper device %q is an LVM logical volume, assuming it is a dmcrypt block: %v", existingOSDDevice, lvErr)
 		}
-		logger.Infof("%q is the actual disk behind the %q encrypted block", existingOSDDevice, encryptedBlock)
+		if isLV {
+			// Keep the LV path as-is so it is matched against the desired devices below
+			// and zapped directly, without resolving (or touching) any backing device.
+			logger.Infof("mapper device %q is an LVM logical volume; matching it against the desired devices to zap in place", existingOSDDevice)
+		} else {
+			encryptedBlock = existingOSDDevice
+			existingOSDDevice, err = GetBackingDeviceForEncryptedBlock(context, existingOSDDevice)
+			if err != nil {
+				logger.Warningf("failed to get actual device used for the dmcrypt block %q: %q", encryptedBlock, err)
+				return nil, "", nil
+			}
+			logger.Infof("%q is the actual disk behind the %q encrypted block", existingOSDDevice, encryptedBlock)
+		}
 	}
 
 	var osdDisk *sys.LocalDisk
